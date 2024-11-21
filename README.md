@@ -1,0 +1,1 @@
+This repository contains a github workflow to build [Eclipse eCAL](https://github.com/eclipse-ecal/ecal) packages for Debian Bookworm.

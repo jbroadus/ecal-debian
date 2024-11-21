@@ -1,0 +1,45 @@
+name: Build eCAL for Debian
+
+on: workflow_dispatch
+
+env:
+  ECAL_VERSION: v5.13.3
+
+jobs:
+  build-ecal:
+    strategy:
+      matrix:
+        release: ['bookworm']
+
+    runs-on: ubuntu-24.04
+    container:
+      image: 'debian:${{ matrix.release }}'
+    steps:
+      - name: Dependencies
+        run: |
+          apt-get update -y
+          apt-get install -y git cmake file doxygen graphviz build-essential zlib1g-dev qtbase5-dev libhdf5-dev libprotobuf-dev libprotoc-dev protobuf-compiler libcurl4-openssl-dev libqwt-qt5-dev libyaml-cpp-dev ninja-build
+      - name: Checkout ecal
+        uses: actions/checkout@v4
+        with:
+          repository: 'eclipse-ecal/ecal'
+          ref: '${{ env.ECAL_VERSION }}'
+          path: 'ecal'
+          submodules: true
+          fetch-depth: 0
+      - name: Configure ecal
+        run: |
+          ls -l
+          mkdir -p build
+          cd build
+          cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DECAL_THIRDPARTY_BUILD_PROTOBUF=OFF -DECAL_THIRDPARTY_BUILD_CURL=OFF -DECAL_THIRDPARTY_BUILD_HDF5=OFF -DECAL_THIRDPARTY_BUILD_QWT=OFF ../ecal
+      - name: Build ecal
+        run: cmake --build build -- -v
+      - name: Build ecal Debian packages
+        run: cmake --build build --target package -- -v
+      - name: Upload debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'ecal-${{ env.ECAL_VERSION }}-${{ matrix.release }}'
+          path: |
+            build/_deploy/*.deb
